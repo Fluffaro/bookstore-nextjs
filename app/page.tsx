@@ -108,7 +108,7 @@ export default function Home() {
   return (
     <SidebarProvider className="shadow-xl">
     <div className="flex flex-row flex-1 ">
-      <AppSidebar className="w-[800px]" />
+      <AppSidebar />
       <div className="flex flex-col flex-1 justify-center items-center py-5">
         <h1 className="text-xl font-bold">Bookstore</h1>
 
