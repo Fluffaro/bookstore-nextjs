@@ -10,21 +10,22 @@ import Navbar from "./components/Navbar";
 import CreateBookForm from "./components/CreateBookForm";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import { AppSidebar } from "./components/app-sidebar"
+import { CART_API_URL } from "@/constants";
+import { API_URL } from "@/constants";
 
-const API_URL = "http://localhost:8080/tasks";
-const CART_API_URL = "http://localhost:8080/cart";
-
-interface TaskType {
+interface BookType {
   id: number;
-  completed: boolean;
   title: string;
   author: string;
-  subheading?: string;
   price: number;
+  description: string;
+  coverImage: string;
+  category: string;
+  featured: boolean;
 }
 
 export default function Home() {
-  const [tasks, setTasks] = useState<TaskType[]>([]);
+  const [books, setBooks] = useState<BookType[]>([]);
   const [token, setToken] = useState<string | null>(null);
   const router = useRouter();
 
@@ -36,97 +37,57 @@ export default function Home() {
     } else {
       console.log("Token found:", storedToken);
       setToken(storedToken);
-      fetchTasks(storedToken);
+      fetchBooks(storedToken);
     }
   }, []);
 
-  const fetchTasks = async (token: string) => {
+  const fetchBooks = async (token: string) => {
     try {
-      console.log("Fetching tasks...");
+      console.log("Fetching books...");
       const response = await fetch(API_URL, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (response.ok) {
         const data = await response.json();
-        console.log("Fetched tasks:", data);
-        setTasks(data);
+        console.log("Fetched books:", data);
+        setBooks(data);
       } else {
         console.error("Failed to fetch books, Status:", response.status);
       }
     } catch (error) {
-      console.error("Error fetching tasks:", error);
+      console.error("Error fetching books:", error);
     }
   };
 
   if (token === null) {
     return <p>Loading...</p>; // Prevent rendering CreateBookForm until token is set
   }
-
-
-
   const handleLogout = () => {
     localStorage.removeItem("token");
     setToken(null);
     router.push("/login");
   };
-
-  
-
-  const handleAddToCart = async (task: TaskType, quantity = 1) => {
-    console.log("handleAddToCart triggered");
-    if (!token) return alert("You must be logged in to add to cart");
-
-    try {
-      const payload = { bookId: task.id, quantity };
-      console.log("Sending payload:", payload);
-      console.log("Sending request with token:", token);
-
-      const response = await fetch(`${CART_API_URL}/add`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(payload),
-      });
-
-      console.log("Response status:", response.status);
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Failed to add to cart: ${response.status} - ${errorText}`);
-      }
-      alert("✅ Added to cart!");
-    } catch (error) {
-      console.error("Error adding to cart:", error);
-    }
-  };
-
-  
-
- 
-
   return (
     <SidebarProvider className="shadow-xl">
-    <div className="flex flex-row flex-1 ">
-      <AppSidebar />
-      <div className="flex flex-col flex-1 justify-center items-center py-5">
-        <h1 className="text-xl font-bold">Bookstore</h1>
+      <div className="flex flex-row flex-1 ">
+        <AppSidebar />
+        <div className="flex flex-col flex-1 justify-center items-center py-5">
+          <h1 className="text-xl font-bold">Bookstore</h1>
+          <CreateBookForm token={token} />
+          <Button onClick={handleLogout} className="mt-4 bg-red-600 text-white w-32">Logout</Button>
+          <div className="flex flex-col space-y-4 mt-4">
+            {books.map((book) => (
+              <Card
+                key={book.id}
+                book={book}
 
-        
-        <CreateBookForm token={token}/>
-        <Button onClick={handleLogout} className="mt-4 bg-red-600 text-white w-32">Logout</Button>
+                token={token}
+              />
+            ))}
+          </div>
 
-        <div className="flex flex-col space-y-4 mt-4">
-          {tasks.map((task) => (
-            <Card key={task.id} task={task}
-              onAddToCart={()=>{
-                handleAddToCart(task);
-              }}
-            />
-          ))}
         </div>
       </div>
-    </div>
     </SidebarProvider>
   );
 }
