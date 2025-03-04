@@ -1,39 +1,55 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Book } from '@/lib/data';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, ShoppingCart } from 'lucide-react';
 import { toast } from 'sonner';
+import { CART_API_URL } from '@/constants';
+
+interface Book {
+  id: number;
+  title: string;
+  author: string;
+  price: number;
+  description: string;
+  coverImage?: string;
+  category?: string;
+  featured?: boolean;
+}
 
 interface FeaturedBookProps {
   book: Book;
+  token: string; // Ensure the user token is passed
 }
 
-const FeaturedBook = ({ book }: FeaturedBookProps) => {
+const FeaturedBook = ({ book, token }: FeaturedBookProps) => {
   const [isLoading, setIsLoading] = useState(true);
 
-  const addToCart = (e: React.MouseEvent) => {
+  const handleAddToCart = async (e: React.MouseEvent) => {
     e.preventDefault();
     
-    // Get existing cart from local storage
-    const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-    
-    // Check if book is already in cart
-    const existingItem = cart.find((item: any) => item.book.id === book.id);
-    
-    if (existingItem) {
-      existingItem.quantity += 1;
-    } else {
-      cart.push({ book, quantity: 1 });
+    if (!token) {
+      return toast.error("You must be logged in to add to cart.");
     }
-    
-    // Save updated cart to local storage
-    localStorage.setItem('cart', JSON.stringify(cart));
-    
-    // Sonner toast notification
-    toast.success(`✅ ${book.title} has been added to your cart.`, {
-      duration: 3000,
-    });
+
+    try {
+      const payload = { bookId: book.id, quantity: 1 };
+      const response = await fetch(`${CART_API_URL}/add`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to add to cart: ${response.status}`);
+      }
+
+      toast.success(`✅ ${book.title} has been added to your cart.`);
+    } catch (error) {
+      console.error("Error adding to cart:", error);
+      toast.error("Failed to add book to cart.");
+    }
   };
 
   return (
@@ -70,7 +86,7 @@ const FeaturedBook = ({ book }: FeaturedBookProps) => {
           
           <div className="flex flex-wrap gap-4">
             <Button 
-              onClick={addToCart}
+              onClick={handleAddToCart}
               className="bg-white text-book-dark hover:bg-white/90 transition-colors"
               size="lg"
             >
@@ -78,16 +94,14 @@ const FeaturedBook = ({ book }: FeaturedBookProps) => {
               Add to Cart
             </Button>
             
-            <Link to={`/book/${book.id}`}>
-              <Button 
-                variant="outline" 
-                className="border-white text-white hover:bg-white/10"
-                size="lg"
-              >
-                View Details
-                <ArrowRight className="ml-2 h-5 w-5" />
-              </Button>
-            </Link>
+            <Button 
+              variant="outline" 
+              className="border-white text-black hover:bg-white/90 transition-colors"
+              size="lg"
+            >
+              View Details
+              <ArrowRight className="ml-2 h-5 w-5" />
+            </Button>
           </div>
         </div>
       </div>
