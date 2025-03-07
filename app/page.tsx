@@ -1,15 +1,9 @@
-"use client";
-import { useEffect, useState } from "react";
-import Card from "./components/card";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Form, FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
-import { useForm } from "react-hook-form";
-import { useRouter } from "next/navigation";
-import Navbar from "./components/Navbar";
-import CreateBookForm from "./components/CreateBookForm";
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
-import { AppSidebar } from "./components/app-sidebar"
+import { useState, useEffect } from 'react';
+import Navbar from '@/components/Navbar';
+import FeaturedBook from '@/components/FeaturedBook';
+import BookCard from '@/components/BookCard';
+import CategoryFilter from '@/components/CategoryFilter';
+import { useRouter } from 'next/navigation';
 
 const API_URL = "http://localhost:8080/tasks";
 const CART_API_URL = "http://localhost:8080/cart";
@@ -23,7 +17,8 @@ interface TaskType {
   price: number;
 }
 
-export default function Home() {
+const Index = () => {
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [tasks, setTasks] = useState<TaskType[]>([]);
   const [token, setToken] = useState<string | null>(null);
   const router = useRouter();
@@ -31,10 +26,8 @@ export default function Home() {
   useEffect(() => {
     const storedToken = localStorage.getItem("token");
     if (!storedToken) {
-      console.warn("No token found. Redirecting to login.");
       router.push("/login");
     } else {
-      console.log("Token found:", storedToken);
       setToken(storedToken);
       fetchTasks(storedToken);
     }
@@ -42,45 +35,22 @@ export default function Home() {
 
   const fetchTasks = async (token: string) => {
     try {
-      console.log("Fetching tasks...");
       const response = await fetch(API_URL, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (response.ok) {
         const data = await response.json();
-        console.log("Fetched tasks:", data);
         setTasks(data);
-      } else {
-        console.error("Failed to fetch books, Status:", response.status);
       }
     } catch (error) {
       console.error("Error fetching tasks:", error);
     }
   };
 
-  if (token === null) {
-    return <p>Loading...</p>; // Prevent rendering CreateBookForm until token is set
-  }
-
-
-
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    setToken(null);
-    router.push("/login");
-  };
-
-  
-
   const handleAddToCart = async (task: TaskType, quantity = 1) => {
-    console.log("handleAddToCart triggered");
     if (!token) return alert("You must be logged in to add to cart");
-
     try {
       const payload = { bookId: task.id, quantity };
-      console.log("Sending payload:", payload);
-      console.log("Sending request with token:", token);
-
       const response = await fetch(`${CART_API_URL}/add`, {
         method: "POST",
         headers: {
@@ -89,8 +59,6 @@ export default function Home() {
         },
         body: JSON.stringify(payload),
       });
-
-      console.log("Response status:", response.status);
       if (!response.ok) {
         const errorText = await response.text();
         throw new Error(`Failed to add to cart: ${response.status} - ${errorText}`);
@@ -101,32 +69,33 @@ export default function Home() {
     }
   };
 
-  
-
- 
-
   return (
-    <SidebarProvider className="shadow-xl">
-    <div className="flex flex-row flex-1 ">
-      <AppSidebar />
-      <div className="flex flex-col flex-1 justify-center items-center py-5">
-        <h1 className="text-xl font-bold">Bookstore</h1>
-
+    <div className="min-h-screen bg-book-cream page-transition">
+      <Navbar />
+      <main className="pt-24">
+        {/* Hero Section */}
+        <section className="container mx-auto px-4 mb-16">
+          {/* Optional: Feature a random task */}
+          {tasks.length > 0 && <FeaturedBook book={tasks[0]} />}
+        </section>
         
-        <CreateBookForm token={token}/>
-        <Button onClick={handleLogout} className="mt-4 bg-red-600 text-white w-32">Logout</Button>
+        {/* Category Filter */}
+        <section className="container mx-auto px-4 mb-4">
+          <h2 className="text-3xl font-serif font-medium mb-6">Explore Our Collection</h2>
+          <CategoryFilter selectedCategory={selectedCategory} onChange={setSelectedCategory} />
+        </section>
 
-        <div className="flex flex-col space-y-4 mt-4">
-          {tasks.map((task) => (
-            <Card key={task.id} task={task}
-              onAddToCart={()=>{
-                handleAddToCart(task);
-              }}
-            />
-          ))}
-        </div>
-      </div>
+        {/* Book Grid */}
+        <section className="container mx-auto px-4 pb-20">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {tasks.map((task) => (
+              <BookCard key={task.id} book={task} className="animate-fade-up" onAddToCart={() => handleAddToCart(task)} />
+            ))}
+          </div>
+        </section>
+      </main>
     </div>
-    </SidebarProvider>
   );
-}
+};
+
+export default Index;
